@@ -34,6 +34,7 @@ export const ErrorNotification: React.FC<Props> = ({
 
     if (!message) {
       setIsHidden(true);
+
       return;
     }
 
@@ -47,10 +48,10 @@ export const ErrorNotification: React.FC<Props> = ({
       return () => window.clearTimeout(id);
     }
 
-    const anim = el.animate(
-      [{ opacity: 1 }, { opacity: 1 }],
-      { duration: AUTO_HIDE_DELAY, fill: 'forwards' },
-    );
+    const anim = el.animate([{ opacity: 1 }, { opacity: 1 }], {
+      duration: AUTO_HIDE_DELAY,
+      fill: 'forwards',
+    });
 
     animationRef.current = anim;
 
