@@ -1,8 +1,9 @@
 /* eslint-disable max-len */
 /* eslint-disable jsx-a11y/control-has-associated-label */
 /* eslint-disable */
-
+/* eslint-disable jsx-a11y/control-has-associated-label */
 import React from 'react';
+import classNames from 'classnames';
 import { Todo } from './types';
 
 interface Props {
@@ -17,11 +18,15 @@ export const TodoItem: React.FC<Props> = ({
   isProcessed = false,
 }) => {
   return (
-    <div className={`todo ${todo.completed ? 'completed' : ''}`} data-cy="Todo">
-      <label className="todo__status-label" htmlFor={`todo-status-${todo.id}`}>
+    <div
+      className={classNames('todo', {
+        completed: todo.completed,
+      })}
+      data-cy="Todo"
+    >
+      <label className="todo__status-label">
         <input
           type="checkbox"
-          id={`todo-status-${todo.id}`}
           className="todo__status"
           checked={todo.completed}
           readOnly
@@ -35,6 +40,7 @@ export const TodoItem: React.FC<Props> = ({
 
       {onDelete && (
         <button
+          type="button"
           className="todo__remove"
           data-cy="TodoDelete"
           onClick={() => onDelete(todo.id)}
@@ -44,13 +50,24 @@ export const TodoItem: React.FC<Props> = ({
       )}
 
       <div
-        className={`modal overlay ${isProcessed ? 'is-active' : 'hidden'}`}
+        className={classNames('modal', 'overlay', {
+          'is-active': isProcessed,
+        })}
         data-cy="TodoLoader"
       >
-        <div className="modal__content">
-          <div className="loader"></div>
+        <div className="modal-background has-background-white-ter" />
+        <div className="modal-content">
+          <div className="loader" />
         </div>
       </div>
     </div>
   );
 };
+
+
+
+
+
+
+
+

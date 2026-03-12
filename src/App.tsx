@@ -1,158 +1,186 @@
 /* eslint-disable max-len */
 /* eslint-disable jsx-a11y/control-has-associated-label */
 /* eslint-disable */
-import React, { useState, useEffect, useRef } from 'react';
-import { TodoList } from './TodoList';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createTodo, deleteTodo, getTodos } from './api/todos';
 import { Todo } from './types';
+import { NewTodo } from './NewTodo';
+import { TodoList } from './TodoList';
+import { Footer, FilterType } from './Footer';
+import { ErrorNotification } from './ErrorNotification';
+import { UserWarning } from './UserWarning';
+import { TodoItem } from './TodoItem';
 
-const USER_ID = 123;
+const USER_ID = 1;
+
+const ERROR_MESSAGES = {
+  emptyTitle: 'Title should not be empty',
+  addFailed: 'Unable to add a todo',
+  deleteFailed: 'Unable to delete a todo',
+  loadFailed: 'Unable to load todos',
+};
+
+const getFilterFromHash = (): FilterType => {
+  switch (window.location.hash) {
+    case '#/active':
+      return 'active';
+
+    case '#/completed':
+      return 'completed';
+
+    default:
+      return 'all';
+  }
+};
 
 export const App: React.FC = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
-  const [tempTodo, setTempTodo] = useState<Todo | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [processingIds, setProcessingIds] = useState<number[]>([]);
   const [title, setTitle] = useState('');
-  const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState('');
+  const [filter, setFilter] = useState<FilterType>('all');
+  const [processingIds, setProcessingIds] = useState<number[]>([]);
+  const [tempTodo, setTempTodo] = useState<Todo | null>(null);
+  const [focusKey, setFocusKey] = useState(0);
 
-  useEffect(() => {
-    setIsLoading(true);
-    fetch(
-      `https://mate-academy.github.io/fe-students-api/todos?userId=${USER_ID}`,
-    )
-      .then(response => response.json())
-      .then((data: Todo[]) => {
-        setTodos(data);
-      })
-      .catch(() => setErrorMessage('Unable to load todos'))
-      .finally(() => setIsLoading(false));
-  }, []);
+  const errorTimerId = useRef<number | null>(null);
 
-  useEffect(() => {
-    if (!isLoading) {
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 0);
+  const clearErrorTimer = () => {
+    if (errorTimerId.current !== null) {
+      window.clearTimeout(errorTimerId.current);
+      errorTimerId.current = null;
     }
-  }, [isLoading]);
-
-  useEffect(() => {
-    if (!errorMessage) {
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      setErrorMessage('');
-    }, 3000);
-
-    return () => clearTimeout(timer);
-  }, [errorMessage]);
-
-  const addTodo = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmedTitle = title.trim();
-
-    if (!trimmedTitle) {
-      setErrorMessage('Title should not be empty');
-
-      return;
-    }
-
-    const newTodo = {
-      id: 0,
-      title: trimmedTitle,
-      completed: false,
-      userId: USER_ID,
-    };
-
-    setTempTodo(newTodo);
-    setIsLoading(true);
-
-    await new Promise(resolve => setTimeout(resolve, 0));
-
-    try {
-      const response = await fetch(
-        'https://mate-academy.github.io/fe-students-api/todos',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newTodo),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error('Unable to add a todo');
-      }
-
-      const createdTodo = await response.json();
-
-      setTodos(prev => [...prev, createdTodo]);
-      setTempTodo(null);
-      setTitle('');
-    } catch {
-      setErrorMessage('Unable to add a todo');
-      setTitle(trimmedTitle);
-      setTempTodo(null);
-    } finally {
-      setIsLoading(false);
-      inputRef.current?.focus();
-    }
-  };
-
-  const deleteTodo = async (id: number) => {
-    setProcessingIds(prev => [...prev, id]);
-
-    await new Promise(resolve => setTimeout(resolve, 0));
-
-    try {
-      const response = await fetch(
-        `https://mate-academy.github.io/fe-students-api/todos/${id}`,
-        {
-          method: 'DELETE',
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error('Unable to delete a todo');
-      }
-
-      setTodos(prev => prev.filter(todo => todo.id !== id));
-    } catch {
-      setErrorMessage('Unable to delete a todo');
-    } finally {
-      setProcessingIds(prev => prev.filter(pid => pid !== id));
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 0);
-    }
-  };
-
-  const clearCompleted = () => {
-    const completedTodos = todos.filter(todo => todo.completed);
-
-    Promise.all(completedTodos.map(todo => deleteTodo(todo.id)));
   };
 
   const hideError = () => {
-    setErrorMessage('');
+    clearErrorTimer();
+    setError('');
   };
 
+  const showError = (message: string) => {
+    clearErrorTimer();
+    setError(message);
+
+    errorTimerId.current = window.setTimeout(() => {
+      setError('');
+      errorTimerId.current = null;
+    }, 3000);
+  };
+
+  const focusInput = () => {
+    setFocusKey(current => current + 1);
+  };
+
+  useEffect(() => {
+    if (!USER_ID) {
+      return;
+    }
+
+    getTodos(USER_ID)
+      .then(setTodos)
+      .catch(() => {
+        showError(ERROR_MESSAGES.loadFailed);
+      });
+
+    return () => {
+      clearErrorTimer();
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      setFilter(getFilterFromHash());
+    };
+
+    handleHashChange();
+    window.addEventListener('hashchange', handleHashChange);
+
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, []);
+
+  const visibleTodos = useMemo(() => {
+    switch (filter) {
+      case 'active':
+        return todos.filter(todo => !todo.completed);
+
+      case 'completed':
+        return todos.filter(todo => todo.completed);
+
+      default:
+        return todos;
+    }
+  }, [todos, filter]);
+
+  const activeCount = todos.filter(todo => !todo.completed).length;
   const hasCompleted = todos.some(todo => todo.completed);
-  const notCompletedCount = todos.filter(todo => !todo.completed).length;
 
-  const filteredTodos = todos.filter(todo => {
-    if (filter === 'active') {
-      return !todo.completed;
+  const hasTodosForFooter = todos.some(todo => !processingIds.includes(todo.id));
+
+  const handleAddTodo = async () => {
+    hideError();
+
+    const trimmedTitle = title.trim();
+
+    if (!trimmedTitle) {
+      showError(ERROR_MESSAGES.emptyTitle);
+      focusInput();
+
+      return;
     }
 
-    if (filter === 'completed') {
-      return todo.completed;
-    }
+    const optimisticTodo: Todo = {
+      id: 0,
+      userId: USER_ID,
+      title: trimmedTitle,
+      completed: false,
+    };
 
-    return true;
-  });
+    setTempTodo(optimisticTodo);
+
+    try {
+      const createdTodo = await createTodo({
+        userId: USER_ID,
+        title: trimmedTitle,
+        completed: false,
+      });
+
+      setTodos(current => [...current, createdTodo]);
+      setTitle('');
+    } catch {
+      showError(ERROR_MESSAGES.addFailed);
+    } finally {
+      setTempTodo(null);
+      focusInput();
+    }
+  };
+
+  const handleDeleteTodo = async (id: number) => {
+    hideError();
+    setProcessingIds(current => [...current, id]);
+
+    try {
+      await deleteTodo(id);
+      setTodos(current => current.filter(todo => todo.id !== id));
+    } catch {
+      showError(ERROR_MESSAGES.deleteFailed);
+    } finally {
+      setProcessingIds(current => current.filter(todoId => todoId !== id));
+      focusInput();
+    }
+  };
+
+  const handleClearCompleted = () => {
+    const completedTodos = todos.filter(todo => todo.completed);
+
+    completedTodos.forEach(todo => {
+      handleDeleteTodo(todo.id);
+    });
+  };
+
+  if (!USER_ID) {
+    return <UserWarning />;
+  }
 
   return (
     <div className="todoapp">
@@ -160,85 +188,57 @@ export const App: React.FC = () => {
 
       <div className="todoapp__content">
         <header className="todoapp__header">
-          <form onSubmit={addTodo}>
-            <input
-              type="text"
-              ref={inputRef}
-              className="todoapp__new-todo"
-              placeholder="What needs to be done?"
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              disabled={isLoading}
-              data-cy="NewTodoField"
-            />
-          </form>
+          <NewTodo
+            value={title}
+            onChange={setTitle}
+            onSubmit={handleAddTodo}
+            disabled={tempTodo !== null}
+            focusKey={focusKey}
+          />
         </header>
 
         {todos.length > 0 && (
           <TodoList
-            todos={filteredTodos}
-            tempTodo={tempTodo}
+            todos={visibleTodos}
             processingIds={processingIds}
-            onDelete={deleteTodo}
+            onDelete={handleDeleteTodo}
           />
         )}
 
-        {todos.length > 0 && (
-          <footer className="todoapp__footer" data-cy="Footer">
-            <span className="todo-count" data-cy="TodosCounter">
-              {notCompletedCount} items left
-            </span>
-            <div className="filters" data-cy="Filter">
-              <a
-                href="#/"
-                className={`filter__link ${filter === 'all' ? 'selected' : ''}`}
-                data-cy="FilterLinkAll"
-                onClick={() => setFilter('all')}
-              >
-                All
-              </a>
-              <a
-                href="#/active"
-                className={`filter__link ${filter === 'active' ? 'selected' : ''}`}
-                data-cy="FilterLinkActive"
-                onClick={() => setFilter('active')}
-              >
-                Active
-              </a>
-              <a
-                href="#/completed"
-                className={`filter__link ${filter === 'completed' ? 'selected' : ''}`}
-                data-cy="FilterLinkCompleted"
-                onClick={() => setFilter('completed')}
-              >
-                Completed
-              </a>
-            </div>
-            <button
-              className="todoapp__clear-completed"
-              onClick={clearCompleted}
-              data-cy="ClearCompletedButton"
-              disabled={!hasCompleted}
-            >
-              Clear completed
-            </button>
-          </footer>
+        {tempTodo && (
+          <TodoItem
+            todo={tempTodo}
+            isProcessed
+          />
         )}
-      </div>
 
-      <div
-        className={`notification is-danger ${errorMessage ? '' : 'hidden'}`}
-        data-cy="ErrorNotification"
-      >
-        <span>{errorMessage}</span>
-        {errorMessage && (
-          <button
-            className="delete"
-            data-cy="HideErrorButton"
-            onClick={hideError}
+        {hasTodosForFooter && (
+          <Footer
+            activeCount={activeCount}
+            hasCompleted={hasCompleted}
+            currentFilter={filter}
+            onClearCompleted={handleClearCompleted}
           />
         )}
       </div>
+
+      <ErrorNotification
+        message={error}
+        onClose={hideError}
+      />
     </div>
   );
 };
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -2,33 +2,38 @@
 /* eslint-disable jsx-a11y/control-has-associated-label */
 /* eslint-disable */
 import React from 'react';
-import { TodoItem } from './TodoItem';
 import { Todo } from './types';
+import { TodoItem } from './TodoItem';
 
 interface Props {
   todos: Todo[];
-  tempTodo: Todo | null;
-  processingIds: number[];
+  processingIds?: number[];
   onDelete: (id: number) => void;
 }
 
 export const TodoList: React.FC<Props> = ({
   todos,
-  tempTodo,
-  processingIds,
+  processingIds = [],
   onDelete,
 }) => {
   return (
-    <section className="todoapp__main" data-cy="TodoList">
+    <section className="todoapp__main" data-cy="Todos">
       {todos.map(todo => (
         <TodoItem
           key={todo.id}
           todo={todo}
-          isProcessed={processingIds.includes(todo.id)}
           onDelete={onDelete}
+          isProcessed={processingIds.includes(todo.id)}
         />
       ))}
-      {tempTodo && <TodoItem todo={tempTodo} isProcessed={true} />}
     </section>
   );
 };
+
+
+
+
+
+
+
+
