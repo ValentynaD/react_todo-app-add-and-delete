@@ -9,12 +9,14 @@ interface Props {
   todos: Todo[];
   processingIds?: number[];
   onDelete: (id: number) => void;
+  onToggle: (id: number) => void;
 }
 
 export const TodoList: React.FC<Props> = ({
   todos,
   processingIds = [],
   onDelete,
+  onToggle,
 }) => {
   return (
     <section className="todoapp__main" data-cy="Todos">
@@ -23,6 +25,7 @@ export const TodoList: React.FC<Props> = ({
           key={todo.id}
           todo={todo}
           onDelete={onDelete}
+          onToggle={onToggle}
           isProcessed={processingIds.includes(todo.id)}
         />
       ))}

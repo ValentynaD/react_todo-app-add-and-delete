@@ -2,7 +2,7 @@
 /* eslint-disable jsx-a11y/control-has-associated-label */
 /* eslint-disable */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { createTodo, deleteTodo, getTodos } from './api/todos';
+import { createTodo, deleteTodo, getTodos, updateTodo } from './api/todos';
 import { Todo } from './types';
 import { NewTodo } from './NewTodo';
 import { TodoList } from './TodoList';
@@ -18,16 +18,15 @@ const ERROR_MESSAGES = {
   addFailed: 'Unable to add a todo',
   deleteFailed: 'Unable to delete a todo',
   loadFailed: 'Unable to load todos',
+  updateFailed: 'Unable to update a todo',
 };
 
 const getFilterFromHash = (): FilterType => {
   switch (window.location.hash) {
     case '#/active':
       return 'active';
-
     case '#/completed':
       return 'completed';
-
     default:
       return 'all';
   }
@@ -103,10 +102,8 @@ export const App: React.FC = () => {
     switch (filter) {
       case 'active':
         return todos.filter(todo => !todo.completed);
-
       case 'completed':
         return todos.filter(todo => todo.completed);
-
       default:
         return todos;
     }
@@ -114,7 +111,6 @@ export const App: React.FC = () => {
 
   const activeCount = todos.filter(todo => !todo.completed).length;
   const hasCompleted = todos.some(todo => todo.completed);
-
   const hasTodosForFooter = todos.some(todo => !processingIds.includes(todo.id));
 
   const handleAddTodo = async () => {
@@ -125,7 +121,6 @@ export const App: React.FC = () => {
     if (!trimmedTitle) {
       showError(ERROR_MESSAGES.emptyTitle);
       focusInput();
-
       return;
     }
 
@@ -170,6 +165,32 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleToggleTodo = async (id: number) => {
+    hideError();
+    setProcessingIds(current => [...current, id]);
+
+    const currentTodo = todos.find(todo => todo.id === id);
+
+    if (!currentTodo) {
+      setProcessingIds(current => current.filter(todoId => todoId !== id));
+      return;
+    }
+
+    try {
+      const updatedTodo = await updateTodo(id, {
+        completed: !currentTodo.completed,
+      });
+
+      setTodos(current =>
+        current.map(todo => (todo.id === id ? updatedTodo : todo)),
+      );
+    } catch {
+      showError(ERROR_MESSAGES.updateFailed);
+    } finally {
+      setProcessingIds(current => current.filter(todoId => todoId !== id));
+    }
+  };
+
   const handleClearCompleted = () => {
     const completedTodos = todos.filter(todo => todo.completed);
 
@@ -202,15 +223,11 @@ export const App: React.FC = () => {
             todos={visibleTodos}
             processingIds={processingIds}
             onDelete={handleDeleteTodo}
+            onToggle={handleToggleTodo}
           />
         )}
 
-        {tempTodo && (
-          <TodoItem
-            todo={tempTodo}
-            isProcessed
-          />
-        )}
+        {tempTodo && <TodoItem todo={tempTodo} isProcessed />}
 
         {hasTodosForFooter && (
           <Footer

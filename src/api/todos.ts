@@ -3,7 +3,7 @@ import { Todo } from '../types';
 const BASE_URL = 'https://mate.academy/students-api';
 const WAIT_DELAY = 500;
 
-type RequestMethod = 'GET' | 'POST' | 'DELETE';
+type RequestMethod = 'GET' | 'POST' | 'DELETE' | 'PATCH';
 
 const wait = (ms: number) =>
   new Promise<void>(resolve => {
@@ -43,3 +43,8 @@ export const createTodo = (todo: Omit<Todo, 'id'>) =>
 
 export const deleteTodo = (todoId: number) =>
   request(`/todos/${todoId}`, 'DELETE');
+
+export const updateTodo = (
+  todoId: number,
+  data: Partial<Omit<Todo, 'id'>>,
+) => request<Todo>(`/todos/${todoId}`, 'PATCH', data);

@@ -2,6 +2,7 @@
 /* eslint-disable jsx-a11y/control-has-associated-label */
 /* eslint-disable */
 /* eslint-disable jsx-a11y/control-has-associated-label */
+/* eslint-disable jsx-a11y/control-has-associated-label */
 import React from 'react';
 import classNames from 'classnames';
 import { Todo } from './types';
@@ -9,12 +10,14 @@ import { Todo } from './types';
 interface Props {
   todo: Todo;
   onDelete?: (id: number) => void;
+  onToggle?: (id: number) => void;
   isProcessed?: boolean;
 }
 
 export const TodoItem: React.FC<Props> = ({
   todo,
   onDelete,
+  onToggle,
   isProcessed = false,
 }) => {
   return (
@@ -29,7 +32,8 @@ export const TodoItem: React.FC<Props> = ({
           type="checkbox"
           className="todo__status"
           checked={todo.completed}
-          readOnly
+          onChange={() => onToggle?.(todo.id)}
+          disabled={isProcessed}
           data-cy="TodoStatus"
         />
       </label>
@@ -44,6 +48,7 @@ export const TodoItem: React.FC<Props> = ({
           className="todo__remove"
           data-cy="TodoDelete"
           onClick={() => onDelete(todo.id)}
+          disabled={isProcessed}
         >
           ×
         </button>
