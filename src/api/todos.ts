@@ -44,7 +44,5 @@ export const createTodo = (todo: Omit<Todo, 'id'>) =>
 export const deleteTodo = (todoId: number) =>
   request(`/todos/${todoId}`, 'DELETE');
 
-export const updateTodo = (
-  todoId: number,
-  data: Partial<Omit<Todo, 'id'>>,
-) => request<Todo>(`/todos/${todoId}`, 'PATCH', data);
+export const updateTodo = (todoId: number, data: Partial<Omit<Todo, 'id'>>) =>
+  request<Todo>(`/todos/${todoId}`, 'PATCH', data);
